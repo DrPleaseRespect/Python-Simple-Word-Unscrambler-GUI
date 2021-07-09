@@ -1,10 +1,59 @@
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from main_window_ui_v2 import Ui_MainWindow
+import logging
 
 Dictionary = 'huge_dict.txt'
 Icon = 'icon.ico'
-VERSION = "1.0.1"
+VERSION = "1.1.0"
+
+class Unscrambler(QtCore.QObject):
+    finished = QtCore.pyqtSignal()
+    progress = QtCore.pyqtSignal(int)
+    progressmax = QtCore.pyqtSignal(int)
+    senditem = QtCore.pyqtSignal(str)
+    Queuetext = QtCore.pyqtSignal(str)
+    cleartext = QtCore.pyqtSignal()
+    def unscramble(self, words, scrambled):
+        self.cleartext.emit()
+        input_total = len(scrambled)
+        progressmax_int = len(words) * len(scrambled)
+        self.progressmax.emit(progressmax_int)
+        logging.info(F"Progress Maximum Set")
+        iteration = 0
+        progress = 0
+        for individual_scrambled in scrambled:
+            logging.info(F"Progress Defined to 0")
+            iteration += 1
+            logging.info(F"Iteration Value: {iteration}")
+            self.Queuetext.emit(F"{iteration}/{input_total}")
+            self.senditem.emit(F"------")
+            logging.debug(F"Queuetext and senditem emitters has been emitted")
+            for i in words:
+                progress += 1
+                
+                if len(i) != len(individual_scrambled):
+                    continue
+                listword = list(i)
+                scrambled_backup = individual_scrambled
+                list_scrambled = list(scrambled_backup)
+                self.progress.emit(progress + 1)
+                for letter in listword:
+                    if letter in list_scrambled:
+                        list_scrambled.remove(letter)
+                    if len(list_scrambled) <= 0:
+                        self.senditem.emit(str(i))
+            
+        
+        self.progress.emit(progressmax_int)
+        self.finished.emit()
+
+
+
+            
+
+        
+        
 
 
    
@@ -134,8 +183,30 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         about_ui.setupUi(dialog)
         dialog.exec()
 
-
     def unscramble(self):
+        self.UnscrambledButton.setEnabled(False)
+        self.Input.setEnabled(False)
+        scrambled = self.Input.text().lower().split()
+        words = load_words()
+        self.thread = QtCore.QThread()
+        self.unscrambler = Unscrambler()
+        self.unscrambler.moveToThread(self.thread)
+        self.thread.started.connect(lambda:self.unscrambler.unscramble(words,scrambled))
+        self.unscrambler.finished.connect(self.thread.quit)
+        self.unscrambler.finished.connect(self.unscrambler.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.unscrambler.progress.connect(self.setprogress)
+        self.unscrambler.progressmax.connect(self.setmaxprogress)
+        self.unscrambler.senditem.connect(self.senditem)
+        self.unscrambler.Queuetext.connect(self.setqueue)
+        self.unscrambler.finished.connect(self.unscramblefinished)
+        self.unscrambler.cleartext.connect(self.cleartext)
+        self.thread.start()
+
+
+
+
+    def old_unscramble(self):
         self.resultslist.clear()
         self.UnscrambledButton.setEnabled(False)
         self.Input.setEnabled(False)
@@ -150,7 +221,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             progress = 0
             iteration += 1
             self.Lines.setText(F"{iteration}/{input_total}")
-            matched.append(F"------")
+            if iteration > 1:
+                self.resultslist.addItem(F"------")
             for i in words:
                 progress += 1
                 if len(i) != len(individiual_scrambled):
@@ -165,13 +237,35 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     if letter in list_scrambled:
                         list_scrambled.remove(letter)
                     if len(list_scrambled) <= 0:
-                        matched.append(i)
-        self.progressBar.setValue(100)
-        self.resultslist.addItems(matched)
+                        self.resultslist.addItem(str(i))
+        #self.progressBar.setValue(100)
+        #self.resultslist.addItems(matched)
         self.UnscrambledButton.setEnabled(True)
         self.Input.setEnabled(True)
         self.Input.clear()
         self.Lines.setText("0/0")
+
+    def setmaxprogress(self, max):
+        self.progressBar.setMaximum(max)
+
+    def setprogress(self, progress):
+        self.progressBar.setValue(progress)
+
+    def senditem(self, item):
+        self.resultslist.addItem(str(item))
+        self.repaint()
+
+    def setqueue(self, queue):
+        self.Lines.setText(queue)
+
+    def unscramblefinished(self):
+        self.UnscrambledButton.setEnabled(True)
+        self.Input.setEnabled(True)
+        self.Input.clear()
+        self.progressBar.setValue(0)
+
+    def cleartext(self):
+        self.resultslist.clear()
 
 
 def load_words():
