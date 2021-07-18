@@ -176,12 +176,13 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             self.UnscrambledButton.setEnabled(True)
 
-    def ShowAboutDialog(QAction):
-        dialog = QtWidgets.QDialog(None, QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowCloseButtonHint)
-        dialog.setWindowIcon(QtGui.QIcon(Icon))
-        about_ui = About()
-        about_ui.setupUi(dialog)
-        dialog.exec()
+    def ShowAboutDialog(self,action):
+        if action.text() == "About":
+            dialog = QtWidgets.QDialog(None, QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowCloseButtonHint)
+            dialog.setWindowIcon(QtGui.QIcon(Icon))
+            about_ui = About()
+            about_ui.setupUi(dialog)
+            dialog.exec()
 
     def unscramble(self):
         self.UnscrambledButton.setEnabled(False)
