@@ -1,7 +1,10 @@
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from main_window_ui_v2 import Ui_MainWindow
+from main_window_ui_v3 import Ui_MainWindow
 import logging
+import time
+
+logging.basicConfig(level=logging.DEBUG)
 
 Dictionary = 'huge_dict.txt'
 Icon = 'icon.ico'
@@ -14,30 +17,45 @@ class Unscrambler(QtCore.QObject):
     senditem = QtCore.pyqtSignal(str)
     Queuetext = QtCore.pyqtSignal(str)
     cleartext = QtCore.pyqtSignal()
+    progress2 = QtCore.pyqtSignal(int)
+    progressmax2 = QtCore.pyqtSignal(int)
     def unscramble(self, words, scrambled):
         self.cleartext.emit()
         input_total = len(scrambled)
-        progressmax_int = len(words) * len(scrambled)
+        progressmax_int = len(words)
+        self.progressmax2.emit(progressmax_int * input_total)
         self.progressmax.emit(progressmax_int)
         logging.info(F"Progress Maximum Set")
         iteration = 0
-        progress = 0
+        progress2 = 0
+        length = len(words) / 30
         for individual_scrambled in scrambled:
-            logging.info(F"Progress Defined to 0")
+            progress = 0
+            
             iteration += 1
+            logging.info(F"Progress Defined to 0")
+            
             logging.info(F"Iteration Value: {iteration}")
+            self.progress2.emit(iteration)
             self.Queuetext.emit(F"{iteration}/{input_total}")
             self.senditem.emit(F"------")
             logging.debug(F"Queuetext and senditem emitters has been emitted")
+            duality = 0
             for i in words:
+                progress2 += 1
                 progress += 1
-                
+                duality += 1
                 if len(i) != len(individual_scrambled):
                     continue
+                if duality > round(length):
+                    self.progress.emit(progress)
+                    duality = 0
+                    self.progress2.emit(progress2 + 1)
+                    
                 listword = list(i)
                 scrambled_backup = individual_scrambled
                 list_scrambled = list(scrambled_backup)
-                self.progress.emit(progress + 1)
+                
                 for letter in listword:
                     if letter in list_scrambled:
                         list_scrambled.remove(letter)
@@ -45,7 +63,7 @@ class Unscrambler(QtCore.QObject):
                         self.senditem.emit(str(i))
             
         
-        self.progress.emit(progressmax_int)
+            # self.progress.emit(progressmax_int)
         self.finished.emit()
 
 
@@ -202,6 +220,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.unscrambler.Queuetext.connect(self.setqueue)
         self.unscrambler.finished.connect(self.unscramblefinished)
         self.unscrambler.cleartext.connect(self.cleartext)
+        self.unscrambler.progress2.connect(self.setprogress2)
+        self.unscrambler.progressmax2.connect(self.setmaxprogress2)
         self.thread.start()
 
 
@@ -264,9 +284,16 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.Input.setEnabled(True)
         self.Input.clear()
         self.progressBar.setValue(0)
+        self.progressBar_2.setValue(0)
 
     def cleartext(self):
         self.resultslist.clear()
+
+    def setprogress2(self, progress):
+        self.progressBar_2.setValue(progress)
+    
+    def setmaxprogress2(self, max):
+        self.progressBar_2.setMaximum(max)
 
 
 def load_words():
