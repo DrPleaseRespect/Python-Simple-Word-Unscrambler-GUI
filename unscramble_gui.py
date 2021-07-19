@@ -40,16 +40,16 @@ class Unscrambler(QtCore.QObject):
             self.Queuetext.emit(F"{iteration}/{input_total}")
             self.senditem.emit(F"------")
             logging.debug(F"Queuetext and senditem emitters has been emitted")
-            duality = 0
+            updateiteration = 0
             for i in words:
                 progress2 += 1
                 progress += 1
-                duality += 1
+                updateiteration += 1
                 if len(i) != len(individual_scrambled):
                     continue
-                if duality > round(length):
+                if updateiteration > round(length):
                     self.progress.emit(progress)
-                    duality = 0
+                    updateiteration = 0
                     self.progress2.emit(progress2 + 1)
                     
                 listword = list(i)
